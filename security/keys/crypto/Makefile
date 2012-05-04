@@ -4,4 +4,4 @@
 
 obj-$(CONFIG_CRYPTO_KEY_TYPE) += crypto_keys.o
 
-crypto_keys-y := crypto_type.o
+crypto_keys-y := crypto_type.o crypto_verify.o
