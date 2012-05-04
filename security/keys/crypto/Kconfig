@@ -15,3 +15,10 @@ config CRYPTO_KEY_PUBLIC_KEY_SUBTYPE
 	  If signature generation and/or verification are to be used,
 	  appropriate hash algorithms (such as SHA-1) must be available.
 	  ENOPKG will be reported if the requisite algorithm is unavailable.
+
+config CRYPTO_KEY_PKEY_ALGO_RSA
+	tristate "RSA public-key algorithm"
+	depends on CRYPTO_KEY_PUBLIC_KEY_SUBTYPE
+	select MPILIB_EXTRA
+	help
+	  This option enables support for the RSA algorithm (PKCS#1, RFC3447).
