@@ -11,4 +11,5 @@ obj-$(CONFIG_PGP_LIBRARY) += pgp_library.o
 
 obj-$(CONFIG_CRYPTO_KEY_PGP_PARSER) += pgp_parser.o
 pgp_parser-y := \
-	pgp_key_parser.o
+	pgp_key_parser.o \
+	pgp_pubkey_sig.o
