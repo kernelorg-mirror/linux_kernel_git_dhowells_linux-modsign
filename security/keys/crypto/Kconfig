@@ -22,3 +22,9 @@ config CRYPTO_KEY_PKEY_ALGO_RSA
 	select MPILIB_EXTRA
 	help
 	  This option enables support for the RSA algorithm (PKCS#1, RFC3447).
+
+config PGP_LIBRARY
+	tristate "PGP parsing library"
+	help
+	  This option enables a library that provides a number of simple
+	  utility functions for parsing PGP (RFC 4880) packet-based messages.
