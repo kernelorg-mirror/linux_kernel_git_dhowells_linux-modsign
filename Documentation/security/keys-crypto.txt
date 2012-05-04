@@ -1,0 +1,181 @@
+			    ======================
+			    CRYPTOGRAPHIC KEY TYPE
+			    ======================
+
+Contents:
+
+  - Overview.
+  - Key identification.
+  - Accessing crypto keys.
+  - Implementing crypto parsers.
+  - Implementing crypto subtypes.
+
+
+========
+OVERVIEW
+========
+
+The "crypto" key type is designed to be a container for cryptographic keys,
+without imposing any particular restrictions on the form of the cryptography or
+the key.
+
+The crypto key is given a subtype that defines what sort of data is associated
+with the key and provides operations to describe and destroy it.  However, no
+requirement is made that the key data actually be loaded into the key.
+
+The crypto key also has a number of data parsers registered with it.  The data
+parsers are responsible for extracing information the blobs of data passed to
+the instantiator function.  The first data parser that recognises the blob gets
+to set the subtype of the key and define the operations that can be done on
+that key.
+
+Completely in-kernel key retention and operation subtypes and parsers can be
+defined, but it would also be possible to provide access to cryptographic
+hardware (such as a TPM) that might be used to both retain the relevant key and
+perform operations using that key.  In such a case, the crypto key would then
+merely be an interface to the TPM driver.
+
+
+==================
+KEY IDENTIFICATION
+==================
+
+Because the identity of a key is not necessarily known and may not be easily
+calculated when a crypto key is allocated, it may not be a simple matter to set
+a key description to something that's useful for determining whether this is
+the key you're looking for.  Furthermore, it may be necessary to perform a
+partial match upon the key identity.
+
+To help with this, when a key is loaded, the parser calculates the key
+fingerprint and stores a copy in the key structure.
+
+The crypto key type's key matching function then performs more checks than just
+the straightforward comparison of the description with the criterion string:
+
+ (1) If the criterion string is of the form "id:<hexdigits>" then the match
+     function will examine a key's fingerprint to see if the hex digits given
+     after the "id:" match the tail.  For instance:
+
+	keyctl search @s crypto id:5acc2142
+
+     will match a key with fingerprint:
+
+	1A00 2040 7601 7889 DE11  882C 3823 04AD 5ACC 2142
+
+ (2) If the criterion string is of the form "<subtype>:<hexdigits>" then the
+     match will match the ID as in (1), but with the added restriction that
+     only keys of the specified subtype (e.g. dsa or rsa) will be matched.  For
+     instance:
+
+	keyctl search @s crypto dsa:5acc2142
+
+Looking in /proc/keys, the last 8 hex digits of the key fingerprint are
+displayed, along with the subtype:
+
+	1a39e171 I-----     1 perm 3f010000     0     0 crypto    modsign.0: DSA 5acc2142 []
+
+
+=====================
+ACCESSING CRYPTO KEYS
+=====================
+
+To access crypto keys from within the kernel, the following inclusion is
+required:
+
+	#include <keys/crypto-type.h>
+
+This gives access to the key type:
+
+	struct key_type key_type_crypto;
+
+
+===========================
+IMPLEMENTING CRYPTO PARSERS
+===========================
+
+The crypto key type keeps a list of registered data parsers.  An example of
+such a parser is one that parses OpenPGP packet formatted data [RFC 4880].
+
+During key instantiation each parser in the list is tried until one doesn't
+return -EBADMSG.
+
+The parser definition structure looks like the following:
+
+	struct crypto_key_parser {
+		struct module		*owner;
+		const char		*name;
+
+		int (*instantiate)(struct key *key,
+				   const void *data, size_t datalen);
+	};
+
+The owner and name fields should be set to the owning module and the name of
+the parser.
+
+There are a number of operations defined by the parser.  They are all optional,
+but it is expected that at least one will be defined.
+
+ (1) instantiate().
+
+     The arguments are the same as for the instantiate function in the key
+     type.  'key' is the crypto key being instantiated; data and datalen are
+     the instantiation data, presumably containing cryptographic key data, and
+     the length of that data.
+
+     If the data format is not recognised, -EBADMSG should be returned.  If it
+     is recognised, but the key cannot for some reason be set up, some other
+     negative error code should be returned.
+
+     If the key can be successfully set up, then key->payload should be set to
+     point to the retained data, key->type_data.p[0] should be set to point to
+     the subtype chosen and key->type_data.p[1] should be set to point to a
+     copy of the key's identity string and 0 should be returned.
+
+     The key's identity string may be partially matched upon.  For a public-key
+     algorithm such as RSA and DSA this will likely be a printable hex version
+     of the key's fingerprint.
+
+Functions are provided to register and unregister parsers:
+
+	int register_crypto_key_parser(struct crypto_key_parser *parser);
+	void unregister_crypto_key_parser(struct crypto_key_parser *subtype);
+
+Parsers may not have the same name.  The names are only used for displaying in
+debugging messages.
+
+
+============================
+IMPLEMENTING CRYPTO SUBTYPES
+============================
+
+The parser selects the appropriate subtype directly and sets it on the key; the
+crypto key then retains a reference on the subtype module (which means the
+parser can be removed thereafter).
+
+The subtype definition structure looks like the following:
+
+	struct crypto_key_subtype {
+		struct module		*owner;
+		const char		*name;
+
+		void (*describe)(const struct key *key, struct seq_file *m);
+		void (*destroy)(void *payload);
+	};
+
+The owner and name fields should be set to the owning module and the name of
+the subtype.
+
+There are a number of operations defined by the subtype:
+
+ (1) describe().
+
+     Mandatory.  This allows the subtype to display something in /proc/keys
+     against the key.  For instance the name of the public key algorithm type
+     could be displayed.  The key type will display the tail of the key
+     identity string after this.
+
+ (2) destroy().
+
+     Mandatory.  This should free the memory associated with the key.  The
+     crypto key will look after freeing the fingerprint and releasing the
+     reference on the subtype module.
