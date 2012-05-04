@@ -63,4 +63,10 @@
 # define MODULE_ARCH_VERMAGIC MODULE_PROC_FAMILY
 #endif
 
+#ifdef CONFIG_X86_32
+#define MODULE_HAS_ELF_REL_ONLY
+#else
+#define MODULE_HAS_ELF_RELA_ONLY
+#endif
+
 #endif /* _ASM_X86_MODULE_H */
