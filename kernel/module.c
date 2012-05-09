@@ -58,6 +58,7 @@
 #include <linux/jump_label.h>
 #include <linux/pfn.h>
 #include <linux/bsearch.h>
+#include "module-verify.h"
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/module.h>
@@ -2402,7 +2403,8 @@ static inline void kmemleak_load_module(const struct module *mod,
 /* Sets info->hdr and info->len. */
 static int copy_and_check(struct load_info *info,
 			  const void __user *umod, unsigned long len,
-			  const char __user *uargs)
+			  const char __user *uargs,
+			  bool *_gpgsig_ok)
 {
 	int err;
 	Elf_Ehdr *hdr;
@@ -2433,6 +2435,12 @@ static int copy_and_check(struct load_info *info,
 		err = -ENOEXEC;
 		goto free_hdr;
 	}
+
+	/* Verify the module's contents */
+	*_gpgsig_ok = false;
+	err = module_verify(hdr, len, _gpgsig_ok);
+	if (err < 0)
+		goto free_hdr;
 
 	info->hdr = hdr;
 	info->len = len;
@@ -2776,7 +2784,8 @@ int __weak module_frob_arch_sections(Elf_Ehdr *hdr,
 	return 0;
 }
 
-static struct module *layout_and_allocate(struct load_info *info)
+static struct module *layout_and_allocate(struct load_info *info,
+					  bool gpgsig_ok)
 {
 	/* Module within temporary copy. */
 	struct module *mod;
@@ -2786,6 +2795,7 @@ static struct module *layout_and_allocate(struct load_info *info)
 	mod = setup_load_info(info);
 	if (IS_ERR(mod))
 		return mod;
+	mod->gpgsig_ok = gpgsig_ok;
 
 	err = check_modinfo(mod, info);
 	if (err)
@@ -2869,17 +2879,18 @@ static struct module *load_module(void __user *umod,
 	struct load_info info = { NULL, };
 	struct module *mod;
 	long err;
+	bool gpgsig_ok;
 
 	pr_debug("load_module: umod=%p, len=%lu, uargs=%p\n",
 	       umod, len, uargs);
 
 	/* Copy in the blobs from userspace, check they are vaguely sane. */
-	err = copy_and_check(&info, umod, len, uargs);
+	err = copy_and_check(&info, umod, len, uargs, &gpgsig_ok);
 	if (err)
 		return ERR_PTR(err);
 
 	/* Figure out module layout, and allocate all the memory. */
-	mod = layout_and_allocate(&info);
+	mod = layout_and_allocate(&info, gpgsig_ok);
 	if (IS_ERR(mod)) {
 		err = PTR_ERR(mod);
 		goto free_copy;
@@ -3516,8 +3527,13 @@ void print_modules(void)
 	printk(KERN_DEFAULT "Modules linked in:");
 	/* Most callers should already have preempt disabled, but make sure */
 	preempt_disable();
-	list_for_each_entry_rcu(mod, &modules, list)
+	list_for_each_entry_rcu(mod, &modules, list) {
 		printk(" %s%s", mod->name, module_flags(mod, buf));
+#ifdef CONFIG_MODULE_SIG
+		if (!mod->gpgsig_ok)
+			printk("(U)");
+#endif
+	}
 	preempt_enable();
 	if (last_unloaded_module[0])
 		printk(" [last unloaded: %s]", last_unloaded_module);
