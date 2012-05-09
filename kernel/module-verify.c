@@ -275,6 +275,80 @@ symcheck_error:
 }
 
 /*
+ * Canonicalise the section table index numbers.
+ *
+ * We build a list of the sections we want to add to the digest and sort it by
+ * name.  We're only interested in adding two types of section:
+ *
+ *  (1) Allocatable sections.  These should have no references to other
+ *      sections.
+ *
+ *  (2) Relocation tables for allocatable sections.  The section table entry
+ *      has a reference to the target section to which the relocations will be
+ *      applied.  The relocation entries have references to symbols in
+ *      non-allocatable sections.  Symbols can be replaced by their contents,
+ *      but do include a further reference to a section - which must be
+ *      canonicalised.
+ *
+ * We also build a map of raw section index to canonical section index.
+ */
+static int module_verify_canonicalise(struct module_verify_data *mvdata)
+{
+	const Elf_Shdr *sechdrs = mvdata->sections;
+	unsigned *canonlist, canon, loop, tmp;
+	bool changed;
+
+	canonlist = kmalloc(sizeof(unsigned) * mvdata->nsects * 2, GFP_KERNEL);
+	if (!canonlist)
+		return -ENOMEM;
+
+	mvdata->canonlist = canonlist;
+	mvdata->canonmap = canonlist + mvdata->nsects;
+	canon = 0;
+
+	for (loop = 1; loop < mvdata->nsects; loop++) {
+		const Elf_Shdr *section = mvdata->sections + loop;
+
+		if (loop == mvdata->sig_index)
+			continue;
+
+		/* We only want allocatable sections and relocation tables */
+		if (section->sh_flags & SHF_ALLOC)
+			canonlist[canon++] = loop;
+		else if ((is_elf_rel(section->sh_type) ||
+			  is_elf_rela(section->sh_type)) &&
+			 mvdata->sections[section->sh_info].sh_flags & SHF_ALLOC)
+			canonlist[canon++] = loop;
+	}
+
+	/* Sort the canonicalisation list */
+	do {
+		changed = false;
+
+		for (loop = 0; loop < canon - 1; loop++) {
+			const char *x, *y;
+
+			x = mvdata->secstrings + sechdrs[canonlist[loop + 0]].sh_name;
+			y = mvdata->secstrings + sechdrs[canonlist[loop + 1]].sh_name;
+
+			if (strcmp(x, y) > 0) {
+				tmp = canonlist[loop + 0];
+				canonlist[loop + 0] = canonlist[loop + 1];
+				canonlist[loop + 1] = tmp;
+				changed = true;
+			}
+		}
+	} while (changed);
+
+	/* What we really want is a raw-to-canon lookup table */
+	memset(mvdata->canonmap, 0xff, mvdata->nsects * sizeof(unsigned));
+	for (loop = 0; loop < canon; loop++)
+		mvdata->canonmap[mvdata->canonlist[loop]] = loop + 1;
+	mvdata->ncanon = canon;
+	return 0;
+}
+
+/*
  * Verify a module's integrity
  */
 int module_verify(const Elf_Ehdr *hdr, size_t size, bool *_gpgsig_ok)
@@ -305,7 +379,13 @@ int module_verify(const Elf_Ehdr *hdr, size_t size, bool *_gpgsig_ok)
 		goto out;
 	}
 
+	/* Produce a canonicalisation map for the sections */
+	ret = module_verify_canonicalise(&mvdata);
+	if (ret < 0)
+		goto out;
+
 	ret = 0;
+	kfree(mvdata.canonlist);
 
 out:
 	switch (ret) {
