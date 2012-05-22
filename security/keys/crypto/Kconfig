@@ -1,0 +1,7 @@
+config CRYPTO_KEY_TYPE
+	tristate "Cryptographic key type"
+	depends on KEYS
+	help
+	  This option provides support for a type of key that holds the keys
+	  required for cryptographic operations such as encryption, decryption,
+	  signature generation and signature verification.
