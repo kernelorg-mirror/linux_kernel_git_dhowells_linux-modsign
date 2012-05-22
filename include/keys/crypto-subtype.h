@@ -20,6 +20,20 @@
 extern struct key_type key_type_crypto;
 
 /*
+ * Context base for signature verification methods.  Allocated by the subtype
+ * and presumably embedded in something appropriate.
+ */
+struct crypto_key_verify_context {
+	struct key *key;
+	struct crypto_key_parser *parser;
+	int (*add_data)(struct crypto_key_verify_context *ctx,
+			const void *data, size_t datalen);
+	int (*end)(struct crypto_key_verify_context *ctx,
+		   const u8 *sig, size_t siglen);
+	void (*cancel)(struct crypto_key_verify_context *ctx);
+};
+
+/*
  * Keys of this type declare a subtype that indicates the handlers and
  * capabilities.
  */
@@ -48,6 +62,13 @@ struct crypto_key_parser {
 	 * Return EBADMSG if not recognised.
 	 */
 	int (*instantiate)(struct key *key, const void *data, size_t datalen);
+
+	/* Attempt to recognise a signature blob and find a matching key.
+	 *
+	 * Return EBADMSG if not recognised.
+	 */
+	struct crypto_key_verify_context *(*verify_sig_begin)(
+		struct key *keyring, const u8 *sig, size_t siglen);
 };
 
 extern int register_crypto_key_parser(struct crypto_key_parser *);
