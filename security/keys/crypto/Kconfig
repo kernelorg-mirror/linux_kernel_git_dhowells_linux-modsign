@@ -5,3 +5,13 @@ config CRYPTO_KEY_TYPE
 	  This option provides support for a type of key that holds the keys
 	  required for cryptographic operations such as encryption, decryption,
 	  signature generation and signature verification.
+
+config CRYPTO_KEY_PUBLIC_KEY_SUBTYPE
+	tristate "Asymmetric public-key crypto algorithm subtype"
+	depends on CRYPTO_KEY_TYPE
+	select MPILIB
+	help
+	  This option provides support for asymmetric public key type handling.
+	  If signature generation and/or verification are to be used,
+	  appropriate hash algorithms (such as SHA-1) must be available.
+	  ENOPKG will be reported if the requisite algorithm is unavailable.
