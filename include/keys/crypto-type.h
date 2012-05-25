@@ -18,6 +18,15 @@
 
 extern struct key_type key_type_crypto;
 
+struct crypto_key_verify_context;
+extern struct crypto_key_verify_context *verify_sig_begin(
+	struct key *key, const void *sig, size_t siglen);
+extern int verify_sig_add_data(struct crypto_key_verify_context *ctx,
+			       const void *data, size_t datalen);
+extern int verify_sig_end(struct crypto_key_verify_context *ctx,
+			  const void *sig, size_t siglen);
+extern void verify_sig_cancel(struct crypto_key_verify_context *ctx);
+
 /*
  * The payload is at the discretion of the subtype.
  */

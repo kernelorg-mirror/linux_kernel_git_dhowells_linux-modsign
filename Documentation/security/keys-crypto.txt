@@ -7,6 +7,7 @@ Contents:
   - Overview.
   - Key identification.
   - Accessing crypto keys.
+    - Signature verification.
   - Implementing crypto parsers.
   - Implementing crypto subtypes.
 
@@ -89,12 +90,72 @@ This gives access to the key type:
 	struct key_type key_type_crypto;
 
 
+SIGNATURE VERIFICATION
+----------------------
+
+The four operations that can perform cryptographic signature verification,
+using one of a set of keys to provide the public key:
+
+ (1) Begin verification procedure.
+
+	struct crypto_key_verify_context *
+	verify_sig_begin(struct key *keyring, const void *sig, size_t siglen);
+
+     This function sets up a verification context from the information in the
+     signature and looks for a suitable key in the keyring.  The signature blob
+     must be presented again at the end of the procedure.  The keys will be
+     checked against parameters in the signature, and if the matching one is
+     not found then -ENOKEY will be returned.
+
+     The hashing algorithm, if such a thing applies, will be determined from
+     information in the signature and the appropriate crypto module will be
+     used.  -ENOPKG will be returned if the hash algorithm is unavailable.
+
+     The return value is an opaque pointer to be passed to the other functions,
+     or a negative error code.
+
+ (2) Indicate data to be verified.
+
+	int verify_sig_add_data(struct crypto_key_verify_context *ctx,
+				const void *data, size_t datalen);
+
+     This function is used to shovel data to the verification procedure so that
+     it can load it into the hash, pass it to hardware or whatever is
+     appropriate for the algorithm being employed.
+
+     The data is not canonicalised for the document type specified in the
+     signature.  The caller must do that.
+
+     It will return 0 if successful and a negative error code if not.
+
+ (3) Complete the verification process.
+
+	int verify_sig_end(struct crypto_key_verify_context *ctx,
+			   const void *sig, size_t siglen);
+
+     This function performs the actual signature verification step and cleans
+     up the resources allocated at the beginning.  The signature must be
+     presented again as some of the data therein may need to be added to the
+     internal hash.
+
+     It will return -EKEYREJECTED if the signature didn't match, 0 if
+     successful and may return other errors as appropriate.
+
+ (4) Cancel the verification process.
+
+	void verify_sig_cancel(struct crypto_key_verify_context *ctx);
+
+     This function cleans up the resources allocated at the beginning.  This is
+     not necessary if verify_sig_end() was called.
+
+
 ===========================
 IMPLEMENTING CRYPTO PARSERS
 ===========================
 
 The crypto key type keeps a list of registered data parsers.  An example of
 such a parser is one that parses OpenPGP packet formatted data [RFC 4880].
+
 
 During key instantiation each parser in the list is tried until one doesn't
 return -EBADMSG.
@@ -107,6 +168,8 @@ The parser definition structure looks like the following:
 
 		int (*instantiate)(struct key *key,
 				   const void *data, size_t datalen);
+		struct crypto_key_verify_context *(*verify_sig_begin)(
+			struct key *keyring, const u8 *sig, size_t siglen);
 	};
 
 The owner and name fields should be set to the owning module and the name of
@@ -134,6 +197,44 @@ but it is expected that at least one will be defined.
      The key's identity string may be partially matched upon.  For a public-key
      algorithm such as RSA and DSA this will likely be a printable hex version
      of the key's fingerprint.
+
+ (2) verify_sig_begin().
+
+     This is similar in concept to the instantiate() function, except that it
+     is given a signature blob to parse rather than a key data blob.
+
+     If the data format is not recognised, -EBADMSG should be returned.  If it
+     is recognised, but the signature verification process cannot for some
+     reason be set up, some other negative error code should be returned.
+     -ENOKEY should be used to indicate that no matching key is available and
+     -ENOPKG should be returned if the hash algorithm or the verification
+     algorithm are unavailable.
+
+     If successful, the parser should allocate a verification context and embed
+     the following struct in it:
+
+	struct crypto_key_verify_context {
+		struct key *key;
+		int (*add_data)(struct crypto_key_verify_context *ctx,
+				const void *data, size_t datalen);
+		int (*end)(struct crypto_key_verify_context *ctx,
+			   const u8 *sig, size_t siglen);
+		void (*cancel)(struct crypto_key_verify_context *ctx);
+	};
+
+     and return a pointer to this to the caller, who will then pass it to the
+     verification operation wrappers described in the "Signature Verification"
+     section.  The three operation pointers here correspond exactly to those
+     wrappers and are all mandatory.  container_of() should be used to retrieve
+     the actual context.
+
+     Note that the crypto key type retains a reference on the parser module for
+     the lifetime of this context, though the operation pointers need not point
+     into this module.
+
+     The parser should also record a pointer to the key selected and take a
+     reference on that key with key_get().
+
 
 Functions are provided to register and unregister parsers:
 
