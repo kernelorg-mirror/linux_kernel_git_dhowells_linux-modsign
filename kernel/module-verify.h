@@ -11,4 +11,10 @@
 
 #ifdef CONFIG_MODULE_SIG
 extern struct key *modsign_keyring;
+extern int module_verify(const void *data, size_t size, bool *_gpgsig_ok);
+#else
+static inline int module_verify(const void *data, size_t size, bool *_gpgsig_ok)
+{
+	return 0;
+}
 #endif
