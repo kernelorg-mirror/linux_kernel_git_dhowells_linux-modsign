@@ -14,6 +14,10 @@
 *.o.*
 *.a
 *.s
+*.ko.unsigned
+*.ko.stripped
+*.ko.stripped.sig
+*.ko.trailer
 *.ko
 *.so
 *.so.dbg
@@ -84,3 +88,12 @@ GTAGS
 *.orig
 *~
 \#*#
+
+#
+# GPG leavings from module signing
+#
+genkey
+modsign.pub
+modsign.sec
+random_seed
+trustdb.gpg
