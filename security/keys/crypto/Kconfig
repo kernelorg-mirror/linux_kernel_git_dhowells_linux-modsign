@@ -28,3 +28,15 @@ config PGP_LIBRARY
 	help
 	  This option enables a library that provides a number of simple
 	  utility functions for parsing PGP (RFC 4880) packet-based messages.
+
+config CRYPTO_KEY_PGP_PARSER
+	tristate "PGP key blob parser"
+	depends on CRYPTO_KEY_TYPE
+	select CRYPTO_KEY_PUBLIC_KEY_SUBTYPE
+	select PGP_LIBRARY
+	select MD5 # V3 fingerprint generation
+	select SHA1 # V4 fingerprint generation
+	help
+	  This option provides support for parsing PGP (RFC 4880) format blobs
+	  for key data and provides the ability to instantiate a crypto key
+	  from a public key packet found inside the blob.
