@@ -40,3 +40,12 @@ config CRYPTO_KEY_PGP_PARSER
 	  This option provides support for parsing PGP (RFC 4880) format blobs
 	  for key data and provides the ability to instantiate a crypto key
 	  from a public key packet found inside the blob.
+
+config PGP_PRELOAD
+	bool "PGP public key preloading facility"
+	select PGP_LIBRARY
+	select CRYPTO_KEY_PGP_PARSER
+	help
+	  This option provides a facility for the kernel to preload PGP-wrapped
+	  bundles of keys during boot.  It is used by module signing to load
+	  the module signing keys for example.
