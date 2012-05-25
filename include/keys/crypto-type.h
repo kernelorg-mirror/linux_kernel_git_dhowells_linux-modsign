@@ -31,4 +31,7 @@ extern void verify_sig_cancel(struct crypto_key_verify_context *ctx);
  * The payload is at the discretion of the subtype.
  */
 
+extern __init int preload_pgp_keys(const u8 *pgpdata, size_t pgpdatalen,
+				   struct key *keyring, const char *descprefix);
+
 #endif /* _KEYS_CRYPTO_TYPE_H */

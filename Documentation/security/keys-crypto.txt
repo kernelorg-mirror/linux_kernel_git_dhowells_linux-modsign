@@ -10,6 +10,7 @@ Contents:
     - Signature verification.
   - Implementing crypto parsers.
   - Implementing crypto subtypes.
+  - Initial PGP key preloading.
 
 
 ========
@@ -280,3 +281,22 @@ There are a number of operations defined by the subtype:
      Mandatory.  This should free the memory associated with the key.  The
      crypto key will look after freeing the fingerprint and releasing the
      reference on the subtype module.
+
+
+=======================
+INITIAL PGP KEY LOADING
+=======================
+
+A function is provided to perform an initial load of a set of public keys bound
+into a PGP packet format blob:
+
+	int preload_pgp_keys(const u8 *pgpdata, size_t pgpdatalen,
+			     struct key *keyring, const char *descprefix);
+
+This takes the blob of data defined by pgpdata and pgpdatalen, extracts keys
+from them and adds them to the specified keyring.  The keys are labelled with
+descprefix plus a simple uniquifier - it is not expected that the description
+will be used to identify the key.  The description is required to prevent all
+but the last key being discarded when the keys are linked into the keyring.
+
+This function is only available during initial kernel set up.
