@@ -56,12 +56,13 @@ struct crypto_key_parser {
 	struct module		*owner;
 	const char		*name;
 
-	/* Attempt to instantiate a key from the data blob passed to add_key()
-	 * or keyctl_instantiate().
+	/* Attempt to parse a key from the data blob passed to add_key() or
+	 * keyctl_instantiate().  Should also generate a proposed description
+	 * that the caller can optionally use for the key.
 	 *
 	 * Return EBADMSG if not recognised.
 	 */
-	int (*instantiate)(struct key *key, const void *data, size_t datalen);
+	int (*preparse)(struct key_preparsed_payload *prep);
 
 	/* Attempt to recognise a signature blob and find a matching key.
 	 *

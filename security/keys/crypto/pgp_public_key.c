@@ -290,17 +290,12 @@ cleanup:
  * Attempt to parse the instantiation data blob for a key as a PGP packet
  * message holding a key.
  */
-static int pgp_key_instantiate(struct key *key,
-			       const void *data, size_t datalen)
+static int pgp_key_preparse(struct key_preparsed_payload *prep)
 {
 	struct pgp_key_data_parse_context ctx;
 	int ret;
 
 	kenter("");
-
-	ret = key_payload_reserve(key, datalen);
-	if (ret < 0)
-		return ret;
 
 	ctx.pgp.types_of_interest =
 		(1 << PGP_PKT_PUBLIC_KEY) | (1 << PGP_PKT_PUBLIC_SUBKEY);
@@ -309,27 +304,27 @@ static int pgp_key_instantiate(struct key *key,
 	ctx.fingerprint = NULL;
 	ctx.payload = NULL;
 
-	ret = pgp_parse_packets(data, datalen, &ctx.pgp);
+	ret = pgp_parse_packets(prep->data, prep->datalen, &ctx.pgp);
 	if (ret < 0) {
 		if (ctx.payload)
 			ctx.subtype->destroy(ctx.payload);
 		if (ctx.subtype)
 			module_put(ctx.subtype->owner);
 		kfree(ctx.fingerprint);
-		key_payload_reserve(key, 0);
 		return ret;
 	}
 
-	key->type_data.p[0] = ctx.subtype;
-	key->type_data.p[1] = ctx.fingerprint;
-	key->payload.data = ctx.payload;
+	prep->type_data[0] = ctx.subtype;
+	prep->type_data[1] = ctx.fingerprint;
+	prep->payload = ctx.payload;
+	prep->quotalen = prep->datalen;
 	return 0;
 }
 
 static struct crypto_key_parser pgp_key_parser = {
 	.owner		= THIS_MODULE,
 	.name		= "pgp",
-	.instantiate	= pgp_key_instantiate,
+	.preparse	= pgp_key_preparse,
 	.verify_sig_begin = pgp_verify_sig_begin,
 };
 

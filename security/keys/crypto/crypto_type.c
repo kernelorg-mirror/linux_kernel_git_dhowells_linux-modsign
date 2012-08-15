@@ -10,6 +10,7 @@
  *
  * See Documentation/security/keys-crypto.txt
  */
+#undef DEBUG
 #include <keys/crypto-subtype.h>
 #include <linux/seq_file.h>
 #include <linux/module.h>
@@ -110,17 +111,20 @@ static void crypto_key_describe(const struct key *key, struct seq_file *m)
 }
 
 /*
- * Instantiate a crypto_key defined key
+ * Preparse a crypto payload to get format the contents appropriately for the
+ * internal payload to cut down on the number of scans of the data performed.
+ *
+ * We also generate a proposed description from the contents of the key that
+ * can be used to name the key if the user doesn't want to provide one.
  */
-static int crypto_key_instantiate(struct key *key,
-				  const void *data, size_t datalen)
+static int crypto_key_preparse(struct key_preparsed_payload *prep)
 {
 	struct crypto_key_parser *parser;
 	int ret;
 
 	pr_devel("==>%s()\n", __func__);
 
-	if (datalen == 0)
+	if (prep->datalen == 0)
 		return -EINVAL;
 
 	down_read(&crypto_key_parsers_sem);
@@ -129,7 +133,7 @@ static int crypto_key_instantiate(struct key *key,
 	list_for_each_entry(parser, &crypto_key_parsers, link) {
 		pr_debug("Trying parser '%s'\n", parser->name);
 
-		ret = parser->instantiate(key, data, datalen);
+		ret = parser->preparse(prep);
 		if (ret != -EBADMSG) {
 			pr_debug("Parser recognised the format (ret %d)\n",
 				 ret);
@@ -138,6 +142,45 @@ static int crypto_key_instantiate(struct key *key,
 	}
 
 	up_read(&crypto_key_parsers_sem);
+	pr_devel("<==%s() = %d\n", __func__, ret);
+	return ret;
+}
+
+/*
+ * Clean up the preparse data
+ */
+static void crypto_key_free_preparse(struct key_preparsed_payload *prep)
+{
+	struct crypto_key_subtype *subtype = prep->type_data[0];
+
+	pr_devel("==>%s()\n", __func__);
+
+	if (subtype) {
+		subtype->destroy(prep->payload);
+		module_put(subtype->owner);
+	}
+	kfree(prep->type_data[1]);
+	kfree(prep->description);
+}
+
+/*
+ * Instantiate a crypto_key defined key
+ */
+static int crypto_key_instantiate(struct key *key, struct key_preparsed_payload *prep)
+{
+	int ret;
+
+	pr_devel("==>%s()\n", __func__);
+
+	ret = key_payload_reserve(key, prep->quotalen);
+	if (ret == 0) {
+		key->type_data.p[0] = prep->type_data[0];
+		key->type_data.p[1] = prep->type_data[1];
+		key->payload.data = prep->payload;
+		prep->type_data[0] = NULL;
+		prep->type_data[1] = NULL;
+		prep->payload = NULL;
+	}
 	pr_devel("<==%s() = %d\n", __func__, ret);
 	return ret;
 }
@@ -159,6 +202,8 @@ static void crypto_key_destroy(struct key *key)
 
 struct key_type key_type_crypto = {
 	.name		= "crypto",
+	.preparse	= crypto_key_preparse,
+	.free_preparse	= crypto_key_free_preparse,
 	.instantiate	= crypto_key_instantiate,
 	.match		= crypto_key_match,
 	.destroy	= crypto_key_destroy,
