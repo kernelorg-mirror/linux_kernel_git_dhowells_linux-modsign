@@ -179,6 +179,7 @@ static int pgp_generate_fingerprint(struct pgp_key_data_parse_context *ctx,
 
 	memcpy(&key->key_id, raw_fingerprint + offset, 8);
 	key->key_id_size = 8;
+	key->id_type = PKEY_ID_PGP;
 
 	ctx->fingerprint = fingerprint;
 	ret = 0;

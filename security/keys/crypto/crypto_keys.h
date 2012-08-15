@@ -15,7 +15,7 @@ struct crypto_key_subtype *crypto_key_subtype(const struct key *key)
 	return key->type_data.p[0];
 }
 
-static inline char *crypto_key_id(const struct key *key)
+static inline const char *crypto_key_id(const struct key *key)
 {
 	return key->type_data.p[1];
 }

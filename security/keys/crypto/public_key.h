@@ -19,7 +19,16 @@
 struct public_key;
 struct public_key_signature;
 
+enum pkey_algo {
+	PKEY_ALGO_DSA,
+	PKEY_ALGO_RSA,
+	PKEY_ALGO__LAST
+};
+
+extern const char *const pkey_algo[PKEY_ALGO__LAST];
+
 enum pkey_hash_algo {
+	PKEY_HASH_MD4,
 	PKEY_HASH_MD5,
 	PKEY_HASH_SHA1,
 	PKEY_HASH_RIPE_MD_160,
@@ -29,6 +38,16 @@ enum pkey_hash_algo {
 	PKEY_HASH_SHA224,
 	PKEY_HASH__LAST
 };
+
+extern const char *const pkey_hash_algo[PKEY_HASH__LAST];
+
+enum pkey_id_type {
+	PKEY_ID_PGP,		/* OpenPGP generated key ID */
+	PKEY_ID_X509,		/* X.509 arbitrary subjectKeyIdentifier */
+	PKEY_ID_TYPE__LAST
+};
+
+extern const char *const pkey_id_type[PKEY_ID_TYPE__LAST];
 
 /*
  * Public key type definition
@@ -56,6 +75,7 @@ struct public_key {
 #define PKEY_CAN_SIGN		0x04
 #define PKEY_CAN_VERIFY		0x08
 #define PKEY_CAN_SIGVER		(PKEY_CAN_SIGN | PKEY_CAN_VERIFY)
+	enum pkey_id_type id_type : 8;
 	union {
 		MPI	mpi[5];
 		struct {

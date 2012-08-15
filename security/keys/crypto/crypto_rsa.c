@@ -218,6 +218,9 @@ static int RSA_verify_signature(const struct public_key *key,
 
 	kenter("");
 
+	if (!RSA_ASN1_templates[sig->pkey_hash_algo].data)
+		return -ENOTSUPP;
+
 	/* (1) Check the signature size against the public key modulus size */
 	k = mpi_get_nbits(key->rsa.n);
 	tsize = mpi_get_nbits(sig->rsa.s);
