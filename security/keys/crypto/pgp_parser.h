@@ -21,3 +21,9 @@
  */
 extern const
 struct public_key_algorithm *pgp_public_key_algorithms[PGP_PUBKEY__LAST];
+
+/*
+ * pgp_pubkey_sig.c
+ */
+extern struct crypto_key_verify_context *pgp_pkey_verify_sig_begin(
+	struct key *crypto_key, const u8 *sigdata, size_t siglen);
