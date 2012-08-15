@@ -60,3 +60,12 @@ config CRYPTO_KEY_X509_PARSER
 	  This option procides support for parsing X.509 format blobs for key
 	  data and provides the ability to instantiate a crypto key from a
 	  public key packet found inside the certificate.
+
+config CRYPTO_KEY_PKCS7_PARSER
+	tristate "PKCS#7 signature parser"
+	depends on CRYPTO_KEY_X509_PARSER
+	select ASN1
+	select OID_REGISTRY
+	help
+	  This option provides support for parsing PKCS#7 format blobs for
+	  signature data and provides the ability to verify a signature.

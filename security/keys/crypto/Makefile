@@ -32,3 +32,18 @@ $(obj)/x509_rsakey-asn1.o: $(obj)/x509_rsakey-asn1.c $(obj)/x509_rsakey-asn1.h
 
 clean-files	+= x509-asn1.c x509-asn1.h
 clean-files	+= x509_rsakey-asn1.c x509_rsakey-asn1.h
+
+#
+# PKCS#7 signature handling
+#
+obj-$(CONFIG_CRYPTO_KEY_PKCS7_PARSER) += pkcs7_signature.o
+pkcs7_signature-y := \
+	pkcs7-asn1.o \
+	pkcs7_key_finder.o \
+	pkcs7_parser.o \
+	pkcs7_sig_verify.o
+
+$(obj)/pkcs7_parser.o: $(obj)/pkcs7-asn1.h
+$(obj)/pkcs7-asn1.o: $(obj)/pkcs7-asn1.c $(obj)/pkcs7-asn1.h
+
+clean-files	+= pkcs7-asn1.c pkcs7-asn1.h
