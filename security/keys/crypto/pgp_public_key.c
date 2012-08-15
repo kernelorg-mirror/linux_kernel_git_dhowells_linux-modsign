@@ -329,6 +329,7 @@ static struct crypto_key_parser pgp_key_parser = {
 	.owner		= THIS_MODULE,
 	.name		= "pgp",
 	.instantiate	= pgp_key_instantiate,
+	.verify_sig_begin = pgp_verify_sig_begin,
 };
 
 /*
