@@ -49,3 +49,14 @@ config PGP_PRELOAD
 	  This option provides a facility for the kernel to preload PGP-wrapped
 	  bundles of keys during boot.  It is used by module signing to load
 	  the module signing keys for example.
+
+config CRYPTO_KEY_X509_PARSER
+	tristate "X.509 certificate parser"
+	depends on CRYPTO_KEY_TYPE
+	select CRYPTO_KEY_PUBLIC_KEY_SUBTYPE
+	select ASN1
+	select OID_REGISTRY
+	help
+	  This option procides support for parsing X.509 format blobs for key
+	  data and provides the ability to instantiate a crypto key from a
+	  public key packet found inside the certificate.

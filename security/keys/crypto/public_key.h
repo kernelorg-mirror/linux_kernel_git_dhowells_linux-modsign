@@ -98,6 +98,8 @@ struct public_key {
 	u8	key_id_size;	/* Number of bytes in key_id */
 };
 
+extern void public_key_destroy(void *payload);
+
 /*
  * Asymmetric public key algorithm signature data
  */
