@@ -30,11 +30,11 @@ static const struct {
 	[PGP_HASH_SHA224].algo		= PKEY_HASH_SHA224,
 };
 
-static int pgp_pkey_verify_sig_add_data(struct crypto_key_verify_context *ctx,
+static int pgp_pkey_verify_sig_add_data(struct crypto_sig_verify_context *ctx,
 					const void *data, size_t datalen);
-static int pgp_pkey_verify_sig_end(struct crypto_key_verify_context *ctx,
+static int pgp_pkey_verify_sig_end(struct crypto_sig_verify_context *ctx,
 				   const u8 *sig, size_t siglen);
-static void pgp_pkey_verify_sig_cancel(struct crypto_key_verify_context *ctx);
+static void pgp_pkey_verify_sig_cancel(struct crypto_sig_verify_context *ctx);
 
 struct pgp_pkey_sig_parse_context {
 	struct pgp_parse_context pgp;
@@ -60,7 +60,7 @@ static int pgp_pkey_parse_signature(struct pgp_parse_context *context,
  * metadata will be put, and parsing the signature to check that it matches the
  * key.
  */
-struct crypto_key_verify_context *pgp_pkey_verify_sig_begin(
+struct crypto_sig_verify_context *pgp_pkey_verify_sig_begin(
 	struct key *crypto_key, const u8 *sigdata, size_t siglen)
 {
 	struct pgp_pkey_sig_parse_context p;
@@ -167,7 +167,7 @@ struct crypto_key_verify_context *pgp_pkey_verify_sig_begin(
 /*
  * Load data into the hash
  */
-static int pgp_pkey_verify_sig_add_data(struct crypto_key_verify_context *ctx,
+static int pgp_pkey_verify_sig_add_data(struct crypto_sig_verify_context *ctx,
 					const void *data, size_t datalen)
 {
 	struct public_key_signature *sig =
@@ -272,7 +272,7 @@ static int pgp_pkey_digest_signature(struct pgp_parse_context *context,
  * The data is now all loaded into the hash; load the metadata, finalise the
  * hash and perform the verification step.
  */
-static int pgp_pkey_verify_sig_end(struct crypto_key_verify_context *ctx,
+static int pgp_pkey_verify_sig_end(struct crypto_sig_verify_context *ctx,
 				   const u8 *sigdata, size_t siglen)
 {
 	struct public_key_signature *sig =
@@ -306,7 +306,7 @@ error_free_ctx:
 /*
  * Cancel an in-progress data loading
  */
-static void pgp_pkey_verify_sig_cancel(struct crypto_key_verify_context *ctx)
+static void pgp_pkey_verify_sig_cancel(struct crypto_sig_verify_context *ctx)
 {
 	struct public_key_signature *sig =
 		container_of(ctx, struct public_key_signature, base);

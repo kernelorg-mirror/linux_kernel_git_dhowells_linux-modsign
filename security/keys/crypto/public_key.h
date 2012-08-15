@@ -102,7 +102,7 @@ struct public_key {
  * Asymmetric public key algorithm signature data
  */
 struct public_key_signature {
-	struct crypto_key_verify_context base;
+	struct crypto_sig_verify_context base;
 	u8 *digest;
 	enum pkey_hash_algo pkey_hash_algo : 8;
 	u8 signed_hash_msw[2];
@@ -119,9 +119,6 @@ struct public_key_signature {
 	};
 	struct shash_desc hash;			/* This must go last! */
 };
-
-extern struct crypto_key_verify_context *pgp_pkey_verify_sig_begin(
-	struct key *crypto_key, const u8 *sigdata, size_t siglen);
 
 extern struct crypto_key_subtype public_key_crypto_key_subtype;
 

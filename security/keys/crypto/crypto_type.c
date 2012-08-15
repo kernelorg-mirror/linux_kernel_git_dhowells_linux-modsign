@@ -19,7 +19,7 @@
 
 MODULE_LICENSE("GPL");
 
-LIST_HEAD(crypto_key_parsers);
+static LIST_HEAD(crypto_key_parsers);
 DECLARE_RWSEM(crypto_key_parsers_sem);
 
 /*

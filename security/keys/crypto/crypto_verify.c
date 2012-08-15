@@ -16,6 +16,8 @@
 #include <linux/err.h>
 #include "crypto_keys.h"
 
+static LIST_HEAD(crypto_sig_parsers);
+
 /**
  * verify_sig_begin - Initiate the use of a crypto key to verify a signature
  * @keyring: The public keys to verify against
@@ -24,11 +26,11 @@
  *
  * Returns a context or an error.
  */
-struct crypto_key_verify_context *verify_sig_begin(
+struct crypto_sig_verify_context *verify_sig_begin(
 	struct key *keyring, const void *sig, size_t siglen)
 {
-	struct crypto_key_verify_context *ret;
-	struct crypto_key_parser *parser;
+	struct crypto_sig_verify_context *ret;
+	struct crypto_sig_parser *parser;
 
 	pr_devel("==>%s()\n", __func__);
 
@@ -38,7 +40,7 @@ struct crypto_key_verify_context *verify_sig_begin(
 	down_read(&crypto_key_parsers_sem);
 
 	ret = ERR_PTR(-EBADMSG);
-	list_for_each_entry(parser, &crypto_key_parsers, link) {
+	list_for_each_entry(parser, &crypto_sig_parsers, link) {
 		if (parser->verify_sig_begin) {
 			if (!try_module_get(parser->owner))
 				continue;
@@ -73,7 +75,7 @@ EXPORT_SYMBOL_GPL(verify_sig_begin);
  *
  * This may be called multiple times.
  */
-int verify_sig_add_data(struct crypto_key_verify_context *ctx,
+int verify_sig_add_data(struct crypto_sig_verify_context *ctx,
 			const void *data, size_t datalen)
 {
 	return ctx->add_data(ctx, data, datalen);
@@ -86,10 +88,10 @@ EXPORT_SYMBOL_GPL(verify_sig_add_data);
  * @sig: The signature data
  * @siglen: The signature length
  */
-int verify_sig_end(struct crypto_key_verify_context *ctx,
+int verify_sig_end(struct crypto_sig_verify_context *ctx,
 		   const void *sig, size_t siglen)
 {
-	struct crypto_key_parser *parser = ctx->parser;
+	struct crypto_sig_parser *parser = ctx->parser;
 	int ret;
 
 	ret = ctx->end(ctx, sig, siglen);
@@ -102,11 +104,56 @@ EXPORT_SYMBOL_GPL(verify_sig_end);
  * verify_sig_end - Cancel signature verification
  * @ctx: The context from verify_sig_begin()
  */
-void verify_sig_cancel(struct crypto_key_verify_context *ctx)
+void verify_sig_cancel(struct crypto_sig_verify_context *ctx)
 {
-	struct crypto_key_parser *parser = ctx->parser;
+	struct crypto_sig_parser *parser = ctx->parser;
 
 	ctx->cancel(ctx);
 	module_put(parser->owner);
 }
 EXPORT_SYMBOL_GPL(verify_sig_cancel);
+
+/**
+ * register_crypto_sig_parser - Register a crypto sig blob parser
+ * @parser: The parser to register
+ */
+int register_crypto_sig_parser(struct crypto_sig_parser *parser)
+{
+	struct crypto_sig_parser *cursor;
+	int ret;
+
+	down_write(&crypto_key_parsers_sem);
+
+	list_for_each_entry(cursor, &crypto_sig_parsers, link) {
+		if (strcmp(cursor->name, parser->name) == 0) {
+			pr_err("Crypto signature parser '%s' already registered\n",
+			       parser->name);
+			ret = -EEXIST;
+			goto out;
+		}
+	}
+
+	list_add_tail(&parser->link, &crypto_sig_parsers);
+
+	pr_notice("Crypto signature parser '%s' registered\n", parser->name);
+	ret = 0;
+
+out:
+	up_write(&crypto_key_parsers_sem);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(register_crypto_sig_parser);
+
+/**
+ * unregister_crypto_sig_parser - Unregister a crypto sig blob parser
+ * @parser: The parser to unregister
+ */
+void unregister_crypto_sig_parser(struct crypto_sig_parser *parser)
+{
+	down_write(&crypto_key_parsers_sem);
+	list_del(&parser->link);
+	up_write(&crypto_key_parsers_sem);
+
+	pr_notice("Crypto signature parser '%s' unregistered\n", parser->name);
+}
+EXPORT_SYMBOL_GPL(unregister_crypto_sig_parser);

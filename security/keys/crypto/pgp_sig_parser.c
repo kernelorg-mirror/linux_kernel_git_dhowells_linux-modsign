@@ -97,10 +97,10 @@ static struct key *find_key_for_pgp_sig(struct key *keyring,
  * Attempt to parse a signature as a PGP packet format blob and find a
  * matching key.
  */
-struct crypto_key_verify_context *pgp_verify_sig_begin(
+static struct crypto_sig_verify_context *pgp_verify_sig_begin(
 	struct key *keyring, const u8 *sig, size_t siglen)
 {
-	struct crypto_key_verify_context *ctx;
+	struct crypto_sig_verify_context *ctx;
 	struct key *key;
 
 	key = find_key_for_pgp_sig(keyring, sig, siglen);
@@ -112,3 +112,25 @@ struct crypto_key_verify_context *pgp_verify_sig_begin(
 	key_put(key);
 	return ctx;
 }
+
+static struct crypto_sig_parser pgp_sig_parser = {
+	.owner		= THIS_MODULE,
+	.name		= "pgp",
+	.verify_sig_begin = pgp_verify_sig_begin,
+};
+
+/*
+ * Module stuff
+ */
+static int __init pgp_sig_init(void)
+{
+	return register_crypto_sig_parser(&pgp_sig_parser);
+}
+
+static void __exit pgp_sig_exit(void)
+{
+	unregister_crypto_sig_parser(&pgp_sig_parser);
+}
+
+module_init(pgp_sig_init);
+module_exit(pgp_sig_exit);
