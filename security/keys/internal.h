@@ -244,6 +244,9 @@ extern long keyctl_invalidate_key(key_serial_t);
 extern long keyctl_instantiate_key_common(key_serial_t,
 					  const struct iovec *,
 					  unsigned, size_t, key_serial_t);
+extern long keyctl_verify_signature(key_serial_t,
+				    const void __user *, size_t,
+				    const void __user *, size_t);
 
 /*
  * Debugging key validation

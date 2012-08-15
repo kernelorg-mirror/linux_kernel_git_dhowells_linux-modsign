@@ -721,7 +721,8 @@ asmlinkage long sys_request_key(const char __user *_type,
 				key_serial_t destringid);
 
 asmlinkage long sys_keyctl(int cmd, unsigned long arg2, unsigned long arg3,
-			   unsigned long arg4, unsigned long arg5);
+			   unsigned long arg4, unsigned long arg5,
+			   unsigned long arg6);
 
 asmlinkage long sys_ioprio_set(int which, int who, int ioprio);
 asmlinkage long sys_ioprio_get(int which, int who);

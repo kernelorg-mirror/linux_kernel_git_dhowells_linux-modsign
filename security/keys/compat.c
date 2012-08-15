@@ -66,7 +66,8 @@ no_payload:
  * directly.
  */
 asmlinkage long compat_sys_keyctl(u32 option,
-				  u32 arg2, u32 arg3, u32 arg4, u32 arg5)
+				  u32 arg2, u32 arg3, u32 arg4, u32 arg5,
+				  u32 arg6)
 {
 	switch (option) {
 	case KEYCTL_GET_KEYRING_ID:
@@ -137,6 +138,11 @@ asmlinkage long compat_sys_keyctl(u32 option,
 
 	case KEYCTL_INVALIDATE:
 		return keyctl_invalidate_key(arg2);
+
+	case KEYCTL_VERIFY_SIGNATURE:
+		return keyctl_verify_signature(arg2,
+					       compat_ptr(arg3), arg4,
+					       compat_ptr(arg5), arg6);
 
 	default:
 		return -EOPNOTSUPP;

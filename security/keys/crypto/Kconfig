@@ -1,5 +1,5 @@
 config CRYPTO_KEY_TYPE
-	tristate "Cryptographic key type"
+	bool "Cryptographic key type"
 	depends on KEYS
 	help
 	  This option provides support for a type of key that holds the keys

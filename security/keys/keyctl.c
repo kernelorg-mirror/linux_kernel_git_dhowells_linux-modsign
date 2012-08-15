@@ -22,6 +22,7 @@
 #include <linux/err.h>
 #include <linux/vmalloc.h>
 #include <linux/security.h>
+#include <keys/crypto-subtype.h>
 #include <asm/uaccess.h>
 #include "internal.h"
 
@@ -1555,10 +1556,98 @@ error_keyring:
 }
 
 /*
+ * Use a key to verify a signature.
+ *
+ * The key argument gives a key to use or a keyring in which a suitable key
+ * might be found.  The signature will be examined and an attempt will be made
+ * to determine the key to use from the information contained therein.
+ */
+long keyctl_verify_signature(key_serial_t ringid,
+			     const void __user *_data, size_t dlen,
+			     const void __user *_sig, size_t slen)
+{
+#ifdef CONFIG_CRYPTO_KEY_TYPE
+	struct crypto_key_verify_context *ctx;
+	void *sig, *buffer;
+	key_ref_t key_ref;
+	size_t seg;
+	long ret;
+
+	printk("-->keyctl_verify_signature(%d,,%zu,,%zu)\n",
+	       ringid, dlen, slen);
+
+	if (!ringid || !_data || !dlen || !_sig || !slen)
+		return -EINVAL;
+
+	key_ref = lookup_user_key(ringid, 0, KEY_SEARCH);
+	if (IS_ERR(key_ref))
+		return PTR_ERR(key_ref);
+
+	ret = -ENOMEM;
+	sig = kmalloc(slen, GFP_KERNEL);
+	if (!sig)
+		goto error_free_key;
+	ret = -EFAULT;
+	if (copy_from_user(sig, _sig, slen) != 0)
+		goto error_free_sig;
+
+	ctx = verify_sig_begin(key_ref_to_ptr(key_ref), sig, slen);
+	if (IS_ERR(ctx)) {
+		ret = PTR_ERR(ctx);
+		goto error_free_sig;
+	}
+
+	ret = -ENOMEM;
+	buffer = kmalloc(PAGE_SIZE, dlen);
+	if (!buffer)
+		goto error_cancel;
+
+	do {
+		seg = min(dlen, PAGE_SIZE - ((size_t)_data & ~PAGE_MASK));
+		ret = -EFAULT;
+		if (copy_from_user(buffer, _data, seg) != 0)
+			goto error_free_buffer;
+		dlen -= seg;
+		_data += seg;
+
+		ret = verify_sig_add_data(ctx, buffer, seg);
+		if (ret < 0)
+			goto error_free_buffer;
+
+		ret = -EINTR;
+		if (signal_pending(current))
+			goto error_free_buffer;
+
+	} while (dlen > 0);
+
+	kfree(buffer);
+	ret = verify_sig_end(ctx, sig, slen);
+	kfree(sig);
+
+	printk("keyctl_verify_signature() = %ld [end]\n", ret);
+	return ret;
+
+error_free_buffer:
+	kfree(buffer);
+error_cancel:
+	verify_sig_cancel(ctx);
+error_free_sig:
+	kfree(sig);
+error_free_key:
+	key_ref_put(key_ref);
+	printk("keyctl_verify_signature() = %ld [err]\n", ret);
+	return ret;
+
+#else /* CONFIG_CRYPTO_KEY_TYPE */
+	return -EOPNOTSUPP;
+#endif /* CONFIG_CRYPTO_KEY_TYPE */
+}
+
+/*
  * The key control system call
  */
-SYSCALL_DEFINE5(keyctl, int, option, unsigned long, arg2, unsigned long, arg3,
-		unsigned long, arg4, unsigned long, arg5)
+SYSCALL_DEFINE6(keyctl, int, option, unsigned long, arg2, unsigned long, arg3,
+		unsigned long, arg4, unsigned long, arg5, unsigned long, arg6)
 {
 	switch (option) {
 	case KEYCTL_GET_KEYRING_ID:
@@ -1656,6 +1745,13 @@ SYSCALL_DEFINE5(keyctl, int, option, unsigned long, arg2, unsigned long, arg3,
 
 	case KEYCTL_INVALIDATE:
 		return keyctl_invalidate_key((key_serial_t) arg2);
+
+	case KEYCTL_VERIFY_SIGNATURE:
+		return keyctl_verify_signature((key_serial_t)arg2,
+					       (const void __user *)arg3,
+					       (size_t)arg4,
+					       (const void __user *)arg5,
+					       (size_t)arg6);
 
 	default:
 		return -EOPNOTSUPP;
