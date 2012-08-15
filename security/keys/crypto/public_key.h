@@ -42,6 +42,8 @@ struct public_key_algorithm {
 		      const struct public_key_signature *sig);
 };
 
+extern const struct public_key_algorithm RSA_public_key_algorithm;
+
 /*
  * Asymmetric public key data
  */
