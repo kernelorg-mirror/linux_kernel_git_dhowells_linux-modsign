@@ -24,3 +24,4 @@ obj-$(CONFIG_SYSCTL) += sysctl.o
 #
 obj-$(CONFIG_TRUSTED_KEYS) += trusted.o
 obj-$(CONFIG_ENCRYPTED_KEYS) += encrypted-keys/
+obj-$(CONFIG_CRYPTO_KEY_TYPE) += crypto/

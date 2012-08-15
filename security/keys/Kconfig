@@ -69,3 +69,5 @@ config KEYS_DEBUG_PROC_KEYS
 	  the resulting table.
 
 	  If you are unsure as to whether this is required, answer N.
+
+source security/keys/crypto/Kconfig
