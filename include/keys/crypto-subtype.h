@@ -34,8 +34,7 @@ struct crypto_key_subtype {
 };
 
 /*
- * Data parser.  Called during instantiation and signature verification
- * initiation.
+ * Key data parser.  Called during key instantiation.
  */
 struct crypto_key_parser {
 	struct list_head	link;
@@ -53,5 +52,38 @@ struct crypto_key_parser {
 
 extern int register_crypto_key_parser(struct crypto_key_parser *);
 extern void unregister_crypto_key_parser(struct crypto_key_parser *);
+
+/*
+ * Context base for signature verification methods.  Allocated by the subtype
+ * and presumably embedded in something appropriate.
+ */
+struct crypto_sig_verify_context {
+	struct key *key;
+	struct crypto_sig_parser *parser;
+	int (*add_data)(struct crypto_sig_verify_context *ctx,
+			const void *data, size_t datalen);
+	int (*end)(struct crypto_sig_verify_context *ctx,
+		   const u8 *sig, size_t siglen);
+	void (*cancel)(struct crypto_sig_verify_context *ctx);
+};
+
+/*
+ * Signature data parser.  Called during signature verification initiation.
+ */
+struct crypto_sig_parser {
+	struct list_head	link;
+	struct module		*owner;
+	const char		*name;
+
+	/* Attempt to recognise a signature blob and find a matching key.
+	 *
+	 * Return EBADMSG if not recognised.
+	 */
+	struct crypto_sig_verify_context *(*verify_sig_begin)(
+		struct key *keyring, const u8 *sig, size_t siglen);
+};
+
+extern int register_crypto_sig_parser(struct crypto_sig_parser *);
+extern void unregister_crypto_sig_parser(struct crypto_sig_parser *);
 
 #endif /* _KEYS_CRYPTO_SUBTYPE_H */

@@ -24,5 +24,4 @@ static inline const char *crypto_key_id(const struct key *key)
 /*
  * crypto_type.c
  */
-extern struct list_head crypto_key_parsers;
 extern struct rw_semaphore crypto_key_parsers_sem;
