@@ -132,3 +132,52 @@ quiet_cmd_timeconst  = TIMEC   $@
 targets += timeconst.h
 $(obj)/timeconst.h: $(src)/timeconst.pl FORCE
 	$(call if_changed,timeconst)
+
+###############################################################################
+#
+# If module signing is requested, say by allyesconfig, but a key has not been
+# supplied, then one will need to be generated to make sure the build does not
+# fail and that the kernel may be used afterwards.
+#
+###############################################################################
+ifeq ($(CONFIG_MODULE_SIG),y)
+modsign.pub modsign.sec: genkey
+	@echo "###"
+	@echo "### Now generating a PGP key pair to be used for signing modules."
+	@echo "###"
+	@echo "### If this takes a long time, you might wish to run rngd in the"
+	@echo "### background to keep the supply of entropy topped up.  It"
+	@echo "### needs to be run as root and should use a hardware random"
+	@echo "### number generator if one is available, eg:"
+	@echo "###"
+	@echo "###     rngd -r /dev/hwrandom"
+	@echo "###"
+	gpg --homedir . --batch --gen-key genkey
+	@echo "###"
+	@echo "### Key pair generated."
+	@echo "###"
+	rm -f pubring.gpg secring.gpg trustdb.gpg
+
+genkey:
+	@echo "###" >&2
+	@echo "### Now generating a sample key generation script." >&2
+	@echo "###" >&2
+	@echo "### IT IS STRONGLY RECOMMENDED THAT YOU SUPPLY YOUR OWN" >&2
+	@echo "### SCRIPT WITH APPROPRIATE NAME FIELDS FILLED IN." >&2
+	@echo "###" >&2
+	@echo "### If you have a hardware random number generator feeding" >&2
+	@echo "### into /dev/random, you should drop the %no-protection" >&2
+	@echo "### and %transient-key lines from the script." >&2
+	@echo "###" >&2
+	echo "%pubring modsign.pub" >genkey
+	echo "%secring modsign.sec" >>genkey
+	echo "%no-protection: yes" >> genkey
+	echo "%transient-key: yes" >>genkey
+	echo "Key-Type: RSA" >>genkey
+	echo "Key-Length: 4096" >>genkey
+	echo "Name-Real: Sample kernel key" >>genkey
+	echo "Name-Comment: Sample kernel module signing key" >>genkey
+	echo "%commit" >>genkey
+
+endif
+CLEAN_FILES += modsign.pub modsign.sec genkey random_seed
