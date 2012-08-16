@@ -227,6 +227,9 @@ struct module
 	/* Unique handle for this module */
 	char name[MODULE_NAME_LEN];
 
+	/* Is this module GPG signed */
+	bool gpgsig_ok;
+
 	/* Sysfs stuff. */
 	struct module_kobject mkobj;
 	struct module_attribute *modinfo_attrs;
