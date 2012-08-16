@@ -736,6 +736,13 @@ out:
 		break;
 	case -ENOKEY:		/* Signed, but we don't have the public key */
 		pr_err("Module signed with unknown public key\n");
+		if (!modsign_signedonly) {
+			/* Allow a module to be signed with an unknown public
+			 * key unless we're enforcing.
+			 */
+			pr_info("Allowing\n");
+			ret = 0;
+		}
 		break;
 	default:		/* Other error (probably ENOMEM) */
 		break;
