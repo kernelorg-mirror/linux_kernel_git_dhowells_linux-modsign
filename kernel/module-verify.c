@@ -20,6 +20,7 @@
 #include <linux/err.h>
 #include <linux/modsign.h>
 #include <linux/moduleparam.h>
+#include <linux/fips.h>
 #include <keys/crypto-type.h>
 #include "module-verify.h"
 
@@ -97,6 +98,10 @@ int module_verify(const void *data, size_t size, bool *_gpgsig_ok)
 	ret = module_verify_signature(data, size);
 
 	pr_devel("module_verify_signature() = %d\n", ret);
+
+        if (ret < 0 && fips_enabled)
+                panic("Module verification failed with error %d in FIPS mode\n",
+                      ret);
 
 	switch (ret) {
 	case 0:			/* Good signature */
