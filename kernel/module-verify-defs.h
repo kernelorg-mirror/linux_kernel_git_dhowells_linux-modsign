@@ -11,6 +11,10 @@
 
 #ifdef CONFIG_MODULE_SIG
 
+#include <linux/module.h>
+
+extern struct key *modsign_keyring;
+
 /*
  * Internal state
  */

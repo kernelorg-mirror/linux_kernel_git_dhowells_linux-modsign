@@ -28,8 +28,6 @@
 #include <linux/err.h>
 #include <linux/elf.h>
 #include <linux/elfnote.h>
-#include <linux/sched.h>
-#include <linux/cred.h>
 #include <linux/modsign.h>
 #include <linux/moduleparam.h>
 #include <keys/crypto-type.h>

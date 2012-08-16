@@ -55,7 +55,8 @@ obj-$(CONFIG_DEBUG_SPINLOCK) += spinlock.o
 obj-$(CONFIG_PROVE_LOCKING) += spinlock.o
 obj-$(CONFIG_UID16) += uid16.o
 obj-$(CONFIG_MODULES) += module.o
-obj-$(CONFIG_MODULE_SIG) += module-verify.o
+obj-$(CONFIG_MODULE_SIG) += module-verify.o modsign-pubkey.o
+kernel/modsign-pubkey.o: modsign.pub
 obj-$(CONFIG_KALLSYMS) += kallsyms.o
 obj-$(CONFIG_BSD_PROCESS_ACCT) += acct.o
 obj-$(CONFIG_KEXEC) += kexec.o
@@ -159,16 +160,18 @@ modsign.pub modsign.sec: genkey
 	rm -f pubring.gpg secring.gpg trustdb.gpg
 
 genkey:
-	@echo "###" >&2
-	@echo "### Now generating a sample key generation script." >&2
-	@echo "###" >&2
-	@echo "### IT IS STRONGLY RECOMMENDED THAT YOU SUPPLY YOUR OWN" >&2
-	@echo "### SCRIPT WITH APPROPRIATE NAME FIELDS FILLED IN." >&2
-	@echo "###" >&2
-	@echo "### If you have a hardware random number generator feeding" >&2
-	@echo "### into /dev/random, you should drop the %no-protection" >&2
-	@echo "### and %transient-key lines from the script." >&2
-	@echo "###" >&2
+	@echo "kernel/Makefile:163: ###" >&2
+	@echo "kernel/Makefile:163: ### CONFIG_MODULE_SIG is enabled so a public key is needed." >&2
+	@echo "kernel/Makefile:163: ###" >&2
+	@echo "kernel/Makefile:163: ### Now generating a sample key generation script." >&2
+	@echo "kernel/Makefile:163: ###" >&2
+	@echo "kernel/Makefile:163: ### IT IS STRONGLY RECOMMENDED THAT YOU SUPPLY YOUR OWN" >&2
+	@echo "kernel/Makefile:163: ### SCRIPT WITH APPROPRIATE NAME FIELDS FILLED IN." >&2
+	@echo "kernel/Makefile:163: ###" >&2
+	@echo "kernel/Makefile:163: ### If you have a hardware random number generator feeding" >&2
+	@echo "kernel/Makefile:163: ### into /dev/random, you should drop the %no-protection" >&2
+	@echo "kernel/Makefile:163: ### and %transient-key lines from the script." >&2
+	@echo "kernel/Makefile:163: ###" >&2
 	echo "%pubring modsign.pub" >genkey
 	echo "%secring modsign.sec" >>genkey
 	echo "%no-protection: yes" >> genkey
