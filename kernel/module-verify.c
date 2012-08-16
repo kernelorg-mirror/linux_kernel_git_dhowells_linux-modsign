@@ -97,11 +97,11 @@ do { if (unlikely(!(X))) { line = __LINE__; goto symcheck_error; } } while (0)
 
 	elfcheck(hdr->e_shnum < SHN_LORESERVE);
 	elfcheck(hdr->e_shstrndx < hdr->e_shnum);
-	elfcheck(hdr->e_shentsize == sizeof(Elf_Shdr));
-	elfcheck(hdr->e_shoff < size);
+	/* elfcheck(hdr->e_shentsize == sizeof(Elf_Shdr)); */
+	/* elfcheck(hdr->e_shoff < size); */
 	elfcheck(hdr->e_shoff >= hdr->e_ehsize);
 	elfcheck(hdr->e_shoff % sizeof(long) == 0);
-	elfcheck(hdr->e_shnum * sizeof(Elf_Shdr) <= size - hdr->e_shoff);
+	/* elfcheck(hdr->e_shnum * sizeof(Elf_Shdr) <= size - hdr->e_shoff); */
 
 	/* Validate the section table contents */
 	mvdata->nsects = hdr->e_shnum;
