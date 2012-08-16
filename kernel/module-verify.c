@@ -30,6 +30,7 @@
 #include <linux/elfnote.h>
 #include <linux/modsign.h>
 #include <linux/moduleparam.h>
+#include <linux/fips.h>
 #include <keys/crypto-type.h>
 #include "module-verify.h"
 #include "module-verify-defs.h"
@@ -716,6 +717,10 @@ int module_verify(const Elf_Ehdr *hdr, size_t size, bool *_gpgsig_ok)
 	kfree(mvdata.canonlist);
 
 out:
+        if (ret < 0 && fips_enabled)
+                panic("Module verification failed with error %d in FIPS mode\n",
+                      ret);
+
 	switch (ret) {
 	case 0:			/* Good signature */
 		*_gpgsig_ok = true;
