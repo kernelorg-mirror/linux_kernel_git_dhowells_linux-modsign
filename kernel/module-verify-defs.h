@@ -19,7 +19,7 @@ extern struct key *modsign_keyring;
  * Internal state
  */
 struct module_verify_data {
-	struct crypto_key_verify_context *mod_sig; /* Module signing context */
+	struct crypto_sig_verify_context *mod_sig; /* Module signing context */
 	union {
 		const void	*buffer;	/* module buffer */
 		const Elf_Ehdr	*hdr;		/* ELF header */
@@ -42,15 +42,16 @@ struct module_verify_data {
 /*
  * Whether or not we support various types of ELF relocation record
  */
-#if defined(MODULE_HAS_ELF_REL_ONLY)
+#ifdef Elf_Rel
 #define is_elf_rel(sh_type)	((sh_type) == SHT_REL)
-#define is_elf_rela(sh_type)	(0)
-#elif defined(MODULE_HAS_ELF_RELA_ONLY)
+#else
 #define is_elf_rel(sh_type)	(0)
+#endif
+
+#ifdef Elf_Rela
 #define is_elf_rela(sh_type)	((sh_type) == SHT_RELA)
 #else
-#define is_elf_rel(sh_type)	((sh_type) == SHT_REL)
-#define is_elf_rela(sh_type)	((sh_type) == SHT_RELA)
+#define is_elf_rela(sh_type)	(0)
 #endif
 
 /*
