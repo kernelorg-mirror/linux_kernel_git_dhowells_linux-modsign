@@ -52,6 +52,9 @@ struct pgp_key_data_parse_context {
 	struct crypto_key_subtype *subtype;
 	char *fingerprint;
 	void *payload;
+	const char *user_id;
+	size_t user_id_len;
+	size_t fingerprint_len;
 };
 
 /*
@@ -166,6 +169,7 @@ static int pgp_generate_fingerprint(struct pgp_key_data_parse_context *ctx,
 	if (ret < 0)
 		goto cleanup_raw_fingerprint;
 
+	ctx->fingerprint_len = digest_size * 2;
 	fingerprint = kmalloc(digest_size * 2 + 1, GFP_KERNEL);
 	if (!fingerprint)
 		goto cleanup_raw_fingerprint;
@@ -211,6 +215,13 @@ static int pgp_process_public_key(struct pgp_parse_context *context,
 	int i, ret;
 
 	kenter(",%u,%u,,%zu", type, headerlen, datalen);
+
+	if (type == PGP_PKT_USER_ID) {
+		ctx->user_id = data;
+		ctx->user_id_len = datalen;
+		kleave(" = 0 [user ID]");
+		return 0;
+	}
 
 	if (ctx->subtype) {
 		kleave(" = -ENOKEY [already]");
@@ -297,21 +308,44 @@ static int pgp_key_preparse(struct key_preparsed_payload *prep)
 
 	kenter("");
 
+	memset(&ctx, 0, sizeof(ctx));
 	ctx.pgp.types_of_interest =
-		(1 << PGP_PKT_PUBLIC_KEY) | (1 << PGP_PKT_PUBLIC_SUBKEY);
+		(1 << PGP_PKT_PUBLIC_KEY) | (1 << PGP_PKT_PUBLIC_SUBKEY) |
+		(1 << PGP_PKT_USER_ID);
 	ctx.pgp.process_packet = pgp_process_public_key;
-	ctx.subtype = NULL;
-	ctx.fingerprint = NULL;
-	ctx.payload = NULL;
 
 	ret = pgp_parse_packets(prep->data, prep->datalen, &ctx.pgp);
-	if (ret < 0) {
-		if (ctx.payload)
-			ctx.subtype->destroy(ctx.payload);
-		if (ctx.subtype)
-			module_put(ctx.subtype->owner);
-		kfree(ctx.fingerprint);
-		return ret;
+	if (ret < 0)
+		goto error;
+
+	if (ctx.user_id && ctx.user_id_len > 0) {
+		/* Propose a description for the key (user ID without the comment) */
+		size_t ulen = ctx.user_id_len, flen = ctx.fingerprint_len;
+		const char *p;
+
+		p = memchr(ctx.user_id, '(', ulen);
+		if (p) {
+			/* Remove the comment */
+			do {
+				p--;
+			} while (*p == ' ' && p > ctx.user_id);
+			if (*p != ' ')
+				p++;
+			ulen = p - ctx.user_id;
+		}
+
+		if (ulen > 255 - 9)
+			ulen = 255 - 9;
+		prep->description = kmalloc(ulen + 1 + 8 + 1, GFP_KERNEL);
+		ret = -ENOMEM;
+		if (!prep->description)
+			goto error;
+		memcpy(prep->description, ctx.user_id, ulen);
+		prep->description[ulen] = ' ';
+		memcpy(prep->description + ulen + 1,
+		       ctx.fingerprint + flen - 8, 8);
+		prep->description[ulen + 9] = 0;
+		pr_debug("desc '%s'\n", prep->description);
 	}
 
 	prep->type_data[0] = ctx.subtype;
@@ -319,6 +353,14 @@ static int pgp_key_preparse(struct key_preparsed_payload *prep)
 	prep->payload = ctx.payload;
 	prep->quotalen = prep->datalen;
 	return 0;
+
+error:
+	if (ctx.payload)
+		ctx.subtype->destroy(ctx.payload);
+	if (ctx.subtype)
+		module_put(ctx.subtype->owner);
+	kfree(ctx.fingerprint);
+	return ret;
 }
 
 static struct crypto_key_parser pgp_key_parser = {
