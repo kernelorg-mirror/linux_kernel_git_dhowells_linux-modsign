@@ -37,6 +37,7 @@ config X509_CERTIFICATE_PARSER
 
 config EFI_SIGNATURE_LIST_PARSER
 	bool "EFI signature list parser"
+	depends on EFI
 	select X509_CERTIFICATE_PARSER
 	help
 	  This option provides support for parsing EFI signature lists for
