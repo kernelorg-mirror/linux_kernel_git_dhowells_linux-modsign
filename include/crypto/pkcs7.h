@@ -23,6 +23,13 @@ extern int pkcs7_get_content_data(const struct pkcs7_message *pkcs7,
 				  bool want_wrapper);
 
 /*
+ * pkcs7_trust.c
+ */
+extern int pkcs7_validate_trust(struct pkcs7_message *pkcs7,
+				struct key *trust_keyring,
+				bool *_trusted);
+
+/*
  * pkcs7_verify.c
  */
 extern int pkcs7_verify(struct pkcs7_message *pkcs7);
