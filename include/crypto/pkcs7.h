@@ -10,6 +10,7 @@
  */
 
 struct pkcs7_message;
+struct key;
 
 /*
  * pkcs7_parser.c
