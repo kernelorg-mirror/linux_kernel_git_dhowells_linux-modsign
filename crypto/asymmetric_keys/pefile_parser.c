@@ -21,6 +21,7 @@
 #include <keys/system_keyring.h>
 #include <crypto/hash.h>
 #include "asymmetric_keys.h"
+#include "x509_parser.h"
 #include "pefile_parser.h"
 
 /*
@@ -404,8 +405,8 @@ static int pefile_key_preparse(struct key_preparsed_payload *prep)
 {
 	struct pkcs7_message *pkcs7;
 	struct pefile_context ctx;
-	const void *data;
-	size_t datalen;
+	const void *saved_data, *data;
+	size_t saved_datalen, datalen;
 	int ret;
 
 	kenter("");
@@ -453,7 +454,14 @@ static int pefile_key_preparse(struct key_preparsed_payload *prep)
 	if (ret < 0)
 		goto error;
 
-	ret = -ENOANO; // Not yet complete
+	/* We can now try to load the key */
+	saved_data = prep->data;
+	saved_datalen = prep->datalen;
+	prep->data += ctx.keylist_offset;
+	prep->datalen = ctx.keylist_len;
+	ret = x509_key_preparse(prep);
+	prep->data = saved_data;
+	prep->datalen = saved_datalen;
 
 error:
 	pkcs7_free_message(ctx.pkcs7);
