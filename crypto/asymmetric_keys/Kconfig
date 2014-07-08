@@ -59,4 +59,12 @@ config PKCS7_TEST_KEY
 
 	  This is intended for testing the PKCS#7 parser.
 
+config PE_FILE_PARSER
+	tristate "PE binary-wrapped key parser"
+	depends on X509_CERTIFICATE_PARSER
+	depends on PKCS7_MESSAGE_PARSER
+	help
+	  This option provides support for parsing signed PE binaries that
+	  contain an X.509 certificate in an internal section.
+
 endif # ASYMMETRIC_KEY_TYPE

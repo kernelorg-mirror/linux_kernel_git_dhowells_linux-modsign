@@ -47,3 +47,11 @@ clean-files	+= pkcs7-asn1.c pkcs7-asn1.h
 obj-$(CONFIG_PKCS7_TEST_KEY) += pkcs7_test_key.o
 pkcs7_test_key-y := \
 	pkcs7_key_type.o
+
+#
+# Signed PE binary-wrapped key handling
+#
+obj-$(CONFIG_PE_FILE_PARSER) += pefile_key_parser.o
+
+pefile_key_parser-y := \
+	pefile_parser.o
