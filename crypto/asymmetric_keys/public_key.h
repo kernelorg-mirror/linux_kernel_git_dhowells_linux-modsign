@@ -13,6 +13,9 @@
 
 #include <crypto/public_key.h>
 
+#define PKEY_CAN_ENCDEC (PKEY_CAN_ENCRYPT | PKEY_CAN_DECRYPT)
+#define PKEY_CAN_SIGVER (PKEY_CAN_SIGN | PKEY_CAN_VERIFY)
+
 extern struct asymmetric_key_subtype public_key_subtype;
 
 /*
