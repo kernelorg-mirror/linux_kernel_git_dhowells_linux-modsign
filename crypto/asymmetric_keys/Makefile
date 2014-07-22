@@ -25,3 +25,8 @@ $(obj)/x509_rsakey-asn1.o: $(obj)/x509_rsakey-asn1.c $(obj)/x509_rsakey-asn1.h
 
 clean-files	+= x509-asn1.c x509-asn1.h
 clean-files	+= x509_rsakey-asn1.c x509_rsakey-asn1.h
+
+#
+# PGP handling
+#
+obj-$(CONFIG_PGP_LIBRARY) += pgp_library.o
