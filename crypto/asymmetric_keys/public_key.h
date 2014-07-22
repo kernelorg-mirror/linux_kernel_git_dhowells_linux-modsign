@@ -31,6 +31,7 @@ struct public_key_algorithm {
 };
 
 extern const struct public_key_algorithm RSA_public_key_algorithm;
+extern const struct public_key_algorithm DSA_public_key_algorithm;
 
 /*
  * public_key.c

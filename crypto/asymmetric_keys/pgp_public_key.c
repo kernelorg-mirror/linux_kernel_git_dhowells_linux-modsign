@@ -36,7 +36,7 @@ static const u8 pgp_public_key_capabilities[PGP_PUBKEY__LAST] = {
 	[PGP_PUBKEY_RSA_ENC_ONLY]	= PKEY_CAN_ENCDEC,
 	[PGP_PUBKEY_RSA_SIG_ONLY]	= PKEY_CAN_SIGVER,
 	[PGP_PUBKEY_ELGAMAL]		= 0,
-	[PGP_PUBKEY_DSA]		= 0,
+	[PGP_PUBKEY_DSA]		= PKEY_CAN_SIGVER,
 };
 
 static inline void digest_putc(struct shash_desc *digest, uint8_t ch)

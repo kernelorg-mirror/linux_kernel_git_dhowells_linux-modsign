@@ -33,6 +33,10 @@ const struct public_key_algorithm *pkey_algo[PKEY_ALGO__LAST] = {
 	defined(CONFIG_PUBLIC_KEY_ALGO_RSA_MODULE)
 	[PKEY_ALGO_RSA]		= &RSA_public_key_algorithm,
 #endif
+#if defined(CONFIG_PUBLIC_KEY_ALGO_DSA) || \
+	defined(CONFIG_PUBLIC_KEY_ALGO_DSA_MODULE)
+	[PKEY_ALGO_DSA]		= &DSA_public_key_algorithm,
+#endif
 };
 EXPORT_SYMBOL_GPL(pkey_algo);
 
